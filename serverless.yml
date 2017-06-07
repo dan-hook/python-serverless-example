@@ -1,0 +1,20 @@
+---
+service: python-serverless-example
+provider:
+  name: aws
+  runtime: python3.6
+  stage: ${opt:stage, self:custom.dev_stage}
+
+package:
+  artifact: target/dist/serverless.zip
+
+custom:
+  dev_stage: ${env:USER}dev
+
+functions:
+  HelloWorld:
+    handler: HelloWorld.hello_world
+    events:
+      - http:
+          path: helloworld
+          method: get
