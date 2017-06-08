@@ -32,12 +32,9 @@ def initialize(project):
     project.set_property('dir_dist', '$dir_target/dist/arcane-hacksaw')
     project.set_property('flake8_break_build', True)
     project.set_property('flake8_include_test_sources', True)
-    project.set_property('coverage_break_build', True)
-    project.set_property('coverage_threshold_warn', 90)
     project.set_property('coverage_branch_threshold_warn', 90)
     project.set_property('coverage_branch_partial_threshold_warn', 90)
     project.set_property('integrationtest_inherit_environment', True)
-    project.set_property('unittest_test_method_prefix', 'test_')
 
 
 @task
