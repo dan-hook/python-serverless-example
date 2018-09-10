@@ -76,7 +76,7 @@ def deploy(logger, project):
 
 @task
 @description('Removes the project from AWS')
-def remove(logger):
+def remove(logger, project):
     call_str = 'aws cloudformation delete-stack --stack-name {}'.format(project.get_property("stack_name"))
     ret = call(call_str, shell=True)
     if ret != 0:

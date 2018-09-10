@@ -1,6 +1,6 @@
 # python-serverless-example
 
-Example Serverless + Python Project
+Example Cloudformation + Python Project
 
 .
 ## Building
