@@ -1,5 +1,6 @@
 from subprocess import call
 import os
+import pwd
 from pybuilder.core import use_plugin, init, task, depends, description
 from pybuilder.errors import BuildFailedException
 import zipfile
@@ -20,8 +21,7 @@ dependencies = [
     ('requests', '==2.11.1')
 ]
 
-deploy_stage = os.getenv('SERVERLESS_STAGE')
-
+user = pwd.getpwuid(os.getuid()).pw_name
 
 @init
 def initialize(project):
@@ -35,11 +35,13 @@ def initialize(project):
     project.set_property('coverage_branch_threshold_warn', 90)
     project.set_property('coverage_branch_partial_threshold_warn', 90)
     project.set_property('integrationtest_inherit_environment', True)
+    project.set_property('s3_bucket', '.'.join(["test",user]))
+    project.set_property('stack_name', ''.join(["DemoStack",user]))
 
 
 @task
 @description('Package the project for deployment')
-def package(logger):
+def package(logger, project):
     for name, _ in dependencies:
         vendor_path = os.path.join('target/dist/arcane-hacksaw', name)
         if os.path.isdir(vendor_path):
@@ -52,29 +54,30 @@ def package(logger):
             for file in files:
                 zipf.write(os.path.join(root, file),
                            os.path.relpath(os.path.join(root, file), 'target/dist/arcane-hacksaw'))
+    call_str = 'aws cloudformation package --template-file template.yaml --s3-bucket {bucket} --output-template-file packaged.yaml'.format(bucket=project.get_property("s3_bucket"))
+    ret = call(call_str, shell=True)
+    if ret != 0:
+        logger.error("Error packaging project")
+        raise BuildFailedException
+
 
 
 @task
 @depends('package')
 @description('Deploy the project to AWS')
-def deploy(logger):
-    if deploy_stage is not None:
-        call_str = 'serverless deploy -s {0}'.format(deploy_stage)
-    else:
-        call_str = 'serverless deploy'
+def deploy(logger, project):
+    call_str = 'aws cloudformation deploy --template-file packaged.yaml --stack-name {} --capabilities CAPABILITY_IAM'.format(project.get_property("stack_name"))
     ret = call(call_str, shell=True)
     if ret != 0:
         logger.error("Error deploying project to AWS")
         raise BuildFailedException
 
 
+
 @task
 @description('Removes the project from AWS')
 def remove(logger):
-    if deploy_stage is not None:
-        call_str = 'serverless remove -s {0}'.format(deploy_stage)
-    else:
-        call_str = 'serverless remove'
+    call_str = 'aws cloudformation delete-stack --stack-name {}'.format(project.get_property("stack_name"))
     ret = call(call_str, shell=True)
     if ret != 0:
         logger.error('Error removing the deployment from AWS')
